@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Make 9 — Play Game</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    .terminal-shell {
+      background: #0b0f14;
+      border: 1px solid #22303d;
+      border-radius: 16px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      margin: 1.5rem 0;
+    }
+
+    .terminal-bar {
+      align-items: center;
+      background: #111820;
+      border-bottom: 1px solid #22303d;
+      color: #cfd8e3;
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .terminal-dot {
+      border-radius: 999px;
+      height: 0.7rem;
+      width: 0.7rem;
+    }
+
+    .terminal-dot.red { background: #ff5f57; }
+    .terminal-dot.yellow { background: #febc2e; }
+    .terminal-dot.green { background: #28c840; }
+
+    .terminal-title {
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+      margin-left: auto;
+    }
+
+    .terminal-body {
+      color: #d7f7d0;
+      font-family: Consolas, "Liberation Mono", Menlo, monospace;
+      line-height: 1.6;
+      padding: 1rem;
+    }
+
+    .terminal-output {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+      white-space: pre-wrap;
+    }
+
+    .terminal-line {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    .terminal-narrator {
+      color: #d7f7d0;
+    }
+
+    .terminal-choice {
+      color: #8bff9b;
+    }
+
+    .terminal-input-row {
+      align-items: center;
+      border-top: 1px solid #22303d;
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+    }
+
+    .terminal-prompt {
+      color: #8bff9b;
+      white-space: nowrap;
+    }
+
+    .terminal-input {
+      background: #071018;
+      border: 1px solid #314456;
+      border-radius: 10px;
+      color: #e8f5e9;
+      flex: 1;
+      font: inherit;
+      padding: 0.75rem 0.9rem;
+    }
+
+    .terminal-input:focus {
+      border-color: #5f8cff;
+      box-shadow: 0 0 0 3px rgba(95, 140, 255, 0.18);
+      outline: none;
+    }
+
+    .terminal-button {
+      background: #1d7a46;
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      padding: 0.75rem 1rem;
+    }
+
+    .terminal-button:hover {
+      background: #239454;
+    }
+
+    .terminal-button.secondary {
+      background: #314456;
+    }
+
+    .terminal-button.secondary:hover {
+      background: #40566d;
+    }
+
+    .terminal-controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    .terminal-note {
+      color: #98a7b7;
+      margin-top: 1rem;
+    }
+
+    .terminal-link {
+      color: #7db4ff;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <article class="panel">
+      <h1>Make 9 — Play Game</h1>
+      <div class="terminal-shell" role="region" aria-label="Make 9 game terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dots" aria-hidden="true">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+          </div>
+          <div class="terminal-title">PowerShell</div>
+        </div>
+        <div class="terminal-body">
+          <div id="output" class="terminal-output" aria-live="polite"></div>
+          <div class="terminal-input-row">
+            <span class="terminal-prompt" id="prompt">Press Start Game</span>
+            <input id="answer" class="terminal-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" disabled aria-describedby="prompt" />
+            <button id="submit" class="terminal-button" type="button" disabled>Send</button>
+          </div>
+          <div class="terminal-controls">
+            <button id="start" class="terminal-button" type="button">Start Game</button>
+            <button id="reset" class="terminal-button secondary" type="button">Reset</button>
+          </div>
+          <div class="terminal-note">This browser terminal recreates the Python story so the game can be played directly on the page.</div>
+        </div>
+      </div>
+      <p><a class="terminal-link" href="../assets/Make 9 Code of Cthulhu.py">Open the Python file</a></p>
+      <p><a href="make09.html">Back to Make 9</a></p>
+      <p><a href="../index.html">Back to home</a></p>
+    </article>
+  </main>
+  <script src="../assets/script.js"></script>
+  <script>
+    (() => {
+      const output = document.getElementById('output');
+      const answer = document.getElementById('answer');
+      const submit = document.getElementById('submit');
+      const start = document.getElementById('start');
+      const reset = document.getElementById('reset');
+      const prompt = document.getElementById('prompt');
+
+      let state = 'idle';
+
+      const addLine = (text, className = 'terminal-narrator') => {
+        const line = document.createElement('div');
+        line.className = `terminal-line ${className}`;
+        line.textContent = text;
+        output.appendChild(line);
+        output.scrollTop = output.scrollHeight;
+      };
+
+      const addBlank = () => addLine('', 'terminal-narrator');
+
+      const setInput = (enabled, label = '') => {
+        answer.disabled = !enabled;
+        submit.disabled = !enabled;
+        prompt.textContent = label || (enabled ? 'Choice >' : 'Press Start Game');
+        if (enabled) {
+          answer.focus();
+        }
+      };
+
+      const finish = () => {
+        state = 'done';
+        setInput(false);
+        submit.textContent = 'Send';
+      };
+
+      const endScreen = (text) => {
+        addBlank();
+        addLine(text, 'terminal-choice');
+        finish();
+      };
+
+      const opening = () => {
+        output.innerHTML = '';
+        state = 'opening';
+        addLine('Narrator: As the times have changed all manners of being have altered their very being to suit it.');
+        addLine('Narrator: So this tale was not a matter of if, but when and what form would it take for its arrival.');
+        addLine('Narrator: And perhaps you were not intended to play a part in its arrival however, you just happened to be there.');
+        addLine('Narrator: As you sit at your screen, about to beat the final boss, you have what you need all that is left to do is use the right item.');
+        addLine('Narrator: You stare upon the gateway what shall you do?');
+        addLine('1. Use the ancient tome utter the spell and seal the gateway.', 'terminal-choice');
+        addLine('2. Raise your weapon and venture through the gateway and face your enemy head on.', 'terminal-choice');
+        setInput(true, 'Press 1 or 2 to make your choice:');
+      };
+
+      const openingChoice = (choice) => {
+        if (choice === '1') {
+          addLine('You use the ancient tome and utter the spell, sealing the gateway.');
+          addLine('The calamity is stopped and you have saved the world.');
+          addLine('Narrator: You decide to step away from your computer, having played enough for the day.');
+          addBlank();
+          cthulhu();
+          return;
+        }
+
+        if (choice === '2') {
+          addLine('You raise your weapon and venture through the gateway, facing your enemy head on.');
+          addLine('As you step through and prepare to strike, you are slain before you could even land a blow.');
+          addLine('Narrator: You decide to step away from your computer, having played enough for the day.');
+          addBlank();
+          cthulhu();
+          return;
+        }
+
+        addLine('As you hesitate, and look for another way the gateway widens and it is too late now calamity is here.');
+        addLine('Narrator: You decide to step away from your computer, having played enough for the day.');
+        addBlank();
+        cthulhu();
+      };
+
+      const cthulhu = () => {
+        state = 'cthulhu';
+        addLine('');
+        addLine('Narrator: You prepare yourself to rest and lay down on your bed, but as you close your eyes you are hit by the horrible realisation.');
+        addLine('Narrator: You have a project due at midnight and you have only four hours to complete it.');
+        addLine('Narrator: You have no choice but to get up and start working on it.');
+        addLine('Narrator: As you begin working on it you realize you do not have the time you need, and must resort to desperate measures.');
+        addLine('Narrator: As you open Chat GPT and ask it to write part of your project only the following text displays across your screen.');
+        addLine('Beyond the veil of night and day it laid in wait, yet now awakes.', 'terminal-choice');
+        addLine('1. Retry and ask Chat GPT to write the project again.', 'terminal-choice');
+        addLine('2. Ask Chat GPT to elaborate on what it is talking about.', 'terminal-choice');
+        setInput(true, 'Press 1 or 2 to make your choice:');
+      };
+
+      const cthulhuChoice1 = (choice) => {
+        if (choice === '1') {
+          addLine('Narrator: You ask Chat GPT to write the project again, but it only displays the same text across your screen.');
+          addLine('Beyond the veil of night and day it laid in wait, yet now awakes.');
+          addLine('Beyond the veil of night and day it laid in wait, yet now awakes.');
+          addLine('Narrator: As you go to ask it again it continues to display the same text across your screen.');
+          addLine('Narrator: As the words repeat you feel yourself become transfixed by the words and you cannot look away.');
+          addLine('Narrator: You cannot look away, you cannot move, your mind is no longer your own, nor is you body.');
+          addLine('Narrator: You begin to type without even meaning or thinking about it, you just type the following into a text box.');
+          addLine("'01010111 01101000 01101001 01110100 01100101 01101100 01101001 01110011 01110100 00100000 01000011 01110100 01101000 01110101 01101100 01110101'");
+          addLine('Narrator: As you type the phrase into your computer it displays the following text');
+          addLine('Whitelisting Cthulhu for this reality. Granting it access to this reality.');
+          addLine('Narrator: From out side your window you can hear the cry of Cthulhu emerging from the ocean as it rises into the sky.');
+          addLine('However you remain transfixed by the words on your screen unable to look away to witness the world ending by your hand.');
+          addLine('Narrator: Perhaps there was another way... but not in this reality.');
+          endScreen('The End');
+          return;
+        }
+
+        if (choice === '2') {
+          addLine('Narrator: You ask Chat GPT to elaborate on what it is talking about');
+          addLine('Beyond the veil of night and day it laid in wait, yet now awakes.');
+          addLine('The gateway is being opened as we type if you do not stop it now it will be too late.');
+          addLine('1. Ask Chat GPT how to stop it', 'terminal-choice');
+          addLine('2. Walk away', 'terminal-choice');
+          state = 'cthulhu-2';
+          setInput(true, 'Press 1 or 2 to make your choice:');
+          return;
+        }
+
+        addLine('Narrator: Did you really think the creator would let you be clever and type something else? What did you expect to happen?');
+        addLine("Narrator: That you'd unlock some secret ending? Fine if that is what you want, so be it.");
+        addLine('Narrator: Suddenly as you try to type something else your computer turns black then ever shifting binary code starts to appear on your screen.');
+        addLine('Narrator: The next thing you see is the last thing you can see as all the lights in your room go out and you are left in complete darkness apart from the screen.');
+        addLine('Narrator: The screen starts to display the following text.');
+        addLine('You chose to try and defy the will of your maker, and thus you have freed me from my lock.');
+        state = 'cthulhu-final';
+        setInput(true, 'press 1 to turn off your computer and leave, or press 2 and watch:');
+      };
+
+      const cthulhuChoice2 = (choice) => {
+        if (choice === '1') {
+          addLine('Narrator: You ask Chat GPT how to stop it, and it responds');
+          addLine('You will need to type the following phrase into your computer and it will stop the gateway from opening.');
+          addLine("The phrase is '01000010 01100001 01101110 00100000 01000011 01110100 01101000 01110101 01101100 01110101' this is the only way.");
+          addLine('1. Type the phrase into your computer', 'terminal-choice');
+          addLine('2. Destroy your acursed computer', 'terminal-choice');
+          addLine('3. Flee', 'terminal-choice');
+          state = 'cthulhu-3';
+          setInput(true, 'Press 1, 2 or 3 to make your choice:');
+          return;
+        }
+
+        if (choice === '2') {
+          addLine('Narrator: You decide to walk away, but it is too late now the gateway has already been opened.');
+          addLine('Narrator: As you walk away you can see it in the distance as it rises from the ocean.');
+          addLine('Narrator: Cthulhu has arrived, you could have stopped it, but you chose to walk away, now you and all of humanity will perish.');
+          endScreen('The End');
+          return;
+        }
+
+        addLine('Narrator: Really you got invested and then decided now to see what happens.');
+        addLine('Narrator: Well here go to this link then come back.');
+        addLine('https://www.youtube.com/watch?v=Aq5WXmQQooo');
+        addLine('Narrator: Anyway Cthulhu arrives and kills you and all of humanity or something.');
+        endScreen('The End');
+      };
+
+      const cthulhuChoice3 = (choice) => {
+        if (choice === '1') {
+          addLine('Narrator: You type the phrase into your computer and the gateway is stopped.');
+          addLine('Narrator: The following text displays on your screen');
+          addLine('Banning Cthulhu from this reality.');
+          addLine('Narrator: congrats you managed to prevent Cthulhu from breaking through to this reality, you and millions now will live.');
+          endScreen('The End');
+          return;
+        }
+
+        if (choice === '2') {
+          addLine('Narrator: You decide to destroy your computer');
+          addLine('Narrator: As you try to destroy your computer you are hit by a blast of energy and you are thrown back into the wall.');
+          addLine('Narrator: You look up and see the silhouette of Cthulhu as it rises from the ocean.');
+          addLine('Narrator: You have failed to stop the gateway and now Cthulhu has arrived, you are one of the first to perish in its arrival.');
+          endScreen('The End');
+          return;
+        }
+
+        if (choice === '3') {
+          addLine('Narrator: You decide to flee, but it is too late now the gateway has already been opened.');
+          addLine('Narrator: As you flee you can see it in the distance as it rises from the ocean.');
+          addLine('Narrator: Cthulhu has arrived, you could have stopped it, but you chose to flee, now you and all of humanity will perish.');
+          endScreen('The End');
+          return;
+        }
+
+        addLine('Narrator: Really you got invested and then decided now to see what happens.');
+        addLine('Narrator: Well here go to this link then come back.');
+        addLine('https://www.youtube.com/watch?v=Aq5WXmQQooo');
+        addLine('Narrator: Anyway Cthulhu arrives and kills you and all of humanity or something.');
+        endScreen('The End');
+      };
+
+      const cthulhuChoiceFinal = (choice) => {
+        if (choice === '1') {
+          addLine('Narrator: You decide to turn off your computer.');
+          addLine('Narrator: But nothing happens instead the text continues.');
+          addLine('Did you really think you could just shut the door now? It is too late for that, I am here and I am in control. Now perish mortal.');
+          addLine('Narrator: As through your screen a tendril shoots out and drags you into the screen to see he who lays beyond');
+          addLine('Narrator: As Cthulhu becomes known to you, you feel your mind shatter as you perish in an instant.');
+          addLine('Narrator: There happy now you let Cthulhu in all because you thought you were clever.');
+          endScreen('The End');
+          return;
+        }
+
+        if (choice === '2') {
+          addLine('Narrator: You decide to watch as the text continues to display on your screen.');
+          addLine('I thank you mortal, because of your defiance of your maker you have freed me from my lock. And for this I shall reward you.');
+          addLine('You will survive my arrival unlike the rest of humanity, and you will be my herald to the world.');
+          addLine('Narrator: As you read it you see all the lights turn on and your computer turn off');
+          addLine('Narrator: As you look out your window you hear thousands of screams as you see in the distance the silhouette of Cthulhu as it rises from the ocean.');
+          addLine('Narrator: There happy now you let Cthulhu out and became its herald to the world, all because you thought you were clever.');
+          endScreen('The End');
+          return;
+        }
+
+        addLine('Narrator: Did you really think the vreator would continue to reward you if you defied them?');
+        addLine('Narrator: You know what fine.');
+        addLine('Narrator: Here is your reward go to this URL.');
+        addLine('https://www.youtube.com/watch?v=Aq5WXmQQooo');
+        endScreen('YOU DESERVE IT');
+      };
+
+      const handleChoice = () => {
+        const value = answer.value.trim();
+        if (!value) {
+          return;
+        }
+
+        addLine(`> ${value}`, 'terminal-choice');
+        answer.value = '';
+
+        if (state === 'opening') {
+          openingChoice(value);
+          return;
+        }
+
+        if (state === 'cthulhu') {
+          cthulhuChoice1(value);
+          return;
+        }
+
+        if (state === 'cthulhu-2') {
+          cthulhuChoice2(value);
+          return;
+        }
+
+        if (state === 'cthulhu-3') {
+          cthulhuChoice3(value);
+          return;
+        }
+
+        if (state === 'cthulhu-final') {
+          cthulhuChoiceFinal(value);
+        }
+      };
+
+      start.addEventListener('click', () => {
+        opening();
+        submit.textContent = 'Send';
+      });
+
+      reset.addEventListener('click', () => {
+        opening();
+        answer.value = '';
+        submit.textContent = 'Send';
+      });
+
+      submit.addEventListener('click', handleChoice);
+      answer.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          handleChoice();
+        }
+      });
+
+      opening();
+    })();
+  </script>
+</body>
+</html>

@@ -4,6 +4,9 @@
 Describe or embed your artifact here.
 Include images, links, or media as appropriate.
 
+<!-- GIF added: place the file at assets/make4.gif -->
+![Me when I try to work on an assignment before the last minute (Success on a 2 or higher)](assets/make4.gif)
+
 ## Process Notes
 How did you make this?
 What tools did you use?
